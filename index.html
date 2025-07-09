@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Pendataan Biodata Guru Karyawan SD Anak Saleh</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome via CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- LeafletJS (untuk peta) via CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <style>
+        /* Memberi tinggi pada container peta agar terlihat */
+        #map { 
+            height: 400px; 
+            border-radius: 0.5rem; /* rounded-lg */
+            z-index: 0;
+        }
+        /* Mengatasi masalah input tanggal yang terkadang transparan */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            opacity: 1;
+        }
+        /* Transisi untuk toast notification */
+        #toast-notification {
+            transition: transform 0.5s ease-in-out, opacity 0.5s;
+        }
+        /* Transisi untuk progress bar dan step labels */
+        #progress-bar-fill, .progress-step {
+            transition: all 0.5s ease-in-out;
+        }
+        .leaflet-control-attribution {
+            display: none; /* Sembunyikan kontrol atribusi Leaflet */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-10">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 flex items-center justify-center">
+                <i class="fas fa-user-edit mr-3 text-indigo-600"></i>
+                Formulir Biodata Guru
+            </h1>
+            <p class="text-gray-600 mt-2">Silakan isi data dengan lengkap dan benar.</p>
+        </header>
+
+        <!-- Progress Bar Section -->
+        <div class="bg-white p-6 rounded-xl shadow-lg mb-8">
+            <h3 class="text-lg font-semibold text-gray-700 mb-2">Progres Pengisian</h3>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                <div id="progress-bar-fill" class="bg-indigo-600 h-2.5 rounded-full" style="width: 20%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-gray-500 mt-2">
+                <span id="step-pribadi" class="progress-step font-bold text-indigo-600"><i class="fas fa-user-circle mr-2 text-indigo-600"></i>Pribadi</span>
+                <span id="step-alamat" class="progress-step"><i class="fas fa-home mr-2 text-indigo-600"></i>Alamat</span>
+                <span id="step-pendidikan" class="progress-step"><i class="fas fa-graduation-cap mr-2 text-indigo-600"></i>Pendidikan</span>
+                <span id="step-jabatan" class="progress-step"><i class="fas fa-user-tie mr-2 text-indigo-600"></i>Jabatan</span>
+                <span id="step-lokasi" class="progress-step"><i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>Lokasi</span>
+            </div>
+        </div>
+
+
+        <form id="biodataForm" class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+            
+            <!-- Step 1: Informasi Pribadi -->
+            <fieldset class="form-step">
+                <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
+                    <i class="fas fa-user-circle mr-2 text-indigo-600"></i>
+                    Informasi Pribadi
+                </legend>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-12">
+                        <label for="NIK" class="block text-sm font-medium text-gray-700">NIK (Nomor Induk Kependudukan)</label>
+                        <input type="text" id="NIK" name="NIK" placeholder="Masukkan NIK" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="gelar_depan" class="block text-sm font-medium text-gray-700">Gelar Depan</label>
+                        <input type="text" id="gelar_depan" name="gelar_depan" placeholder="Contoh: Drs." class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-8">
+                        <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap (Tanpa Gelar) <span class="text-red-500">*</span></label>
+                        <input type="text" id="nama_lengkap" name="nama_lengkap" required placeholder="Masukkan nama tanpa gelar" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                     <div class="md:col-span-2">
+                        <label for="gelar_belakang" class="block text-sm font-medium text-gray-700">Gelar Belakang</label>
+                        <input type="text" id="gelar_belakang" name="gelar_belakang" placeholder="Contoh: S.Pd." class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                    <div>
+                        <label for="jenis_kelamin" class="block text-sm font-medium text-gray-700">Jenis Kelamin <span class="text-red-500">*</span></label>
+                        <select id="jenis_kelamin" name="jenis_kelamin" required class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option value="" disabled selected>Pilih Jenis Kelamin</option>
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="tempat_lahir" class="block text-sm font-medium text-gray-700">Tempat Lahir</label>
+                        <input type="text" id="tempat_lahir" name="tempat_lahir" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="tanggal_lahir" class="block text-sm font-medium text-gray-700">Tanggal Lahir</label>
+                        <input type="date" id="tanggal_lahir" name="tanggal_lahir" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Step 2: Informasi Alamat -->
+            <fieldset class="form-step hidden">
+                <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
+                    <i class="fas fa-home mr-2 text-indigo-600"></i>
+                    Informasi Alamat
+                </legend>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div class="md:col-span-4">
+                        <label for="alamat" class="block text-sm font-medium text-gray-700">Alamat Jalan <span class="text-red-500">*</span></label>
+                        <input type="text" id="alamat" name="alamat" required placeholder="Contoh: Jl. Pahlawan" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="no_rumah" class="block text-sm font-medium text-gray-700">No. Rumah</label>
+                        <input type="text" id="no_rumah" name="no_rumah" placeholder="001" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="rt" class="block text-sm font-medium text-gray-700">RT</label>
+                        <input type="text" id="rt" name="rt" placeholder="002" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="rw" class="block text-sm font-medium text-gray-700">RW</label>
+                        <input type="text" id="rw" name="rw" placeholder="003" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                     <div>
+                        <label for="kelurahan" class="block text-sm font-medium text-gray-700">Kelurahan / Desa</label>
+                        <input type="text" id="kelurahan" name="kelurahan" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-1">
+                        <label for="kecamatan" class="block text-sm font-medium text-gray-700">Kecamatan</label>
+                        <input type="text" id="kecamatan" name="kecamatan" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="kota_kabupaten" class="block text-sm font-medium text-gray-700">Kota / Kabupaten <span class="text-red-500">*</span></label>
+                        <input type="text" id="kota_kabupaten" name="kota_kabupaten" required class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div class="md:col-span-1">
+                        <label for="no_whatsapp" class="block text-sm font-medium text-gray-700">No Whatsapp</label>
+                        <input type="text" id="no_whatsapp" name="no_whatsapp" placeholder="Contoh: 628123...." class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Step 3: Informasi Pendidikan & Sertifikasi -->
+            <fieldset class="form-step hidden">
+                <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
+                    <i class="fas fa-graduation-cap mr-2 text-indigo-600"></i>
+                    Pendidikan & Sertifikasi
+                </legend>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                         <label for="pendidikan_terakhir" class="block text-sm font-medium text-gray-700">Pendidikan Terakhir <span class="text-red-500">*</span></label>
+                        <select id="pendidikan_terakhir" name="pendidikan_terakhir" required class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                             <option value="" disabled selected>Pilih Pendidikan</option>
+                             <option value="SMA/SMK">SMA/SMK Sederajat</option>
+                             <option value="D1">D1</option>
+                             <option value="D2">D2</option>
+                             <option value="D3">D3</option>
+                             <option value="S1/D4">S1/D4</option>
+                             <option value="S2">S2</option>
+                             <option value="S3">S3</option>
+                         </select>
+                    </div>
+                     <div>
+                        <label for="jurusan" class="block text-sm font-medium text-gray-700">Jurusan</label>
+                        <input type="text" id="jurusan" name="jurusan" placeholder="Contoh: Pendidikan Matematika" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+                <div class="mt-6">
+                    <label for="sertifikasi" class="block text-sm font-medium text-gray-700">Sudah menerima sertifikat pendidik?</label>
+                    <select id="sertifikasi" name="sertifikasi" class="mt-1 p-2 block w-full md:w-1/3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <option value="tidak">Tidak</option>
+                        <option value="ya">Ya</option>
+                    </select>
+                </div>
+                <!-- Field Sertifikasi (muncul kondisional) -->
+                <div id="sertifikasi-fields" class="hidden mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500">
+                    <div>
+                        <label for="nuptk" class="block text-sm font-medium text-gray-700">NUPTK</label>
+                        <input type="text" id="nuptk" name="nuptk" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="no_ukg" class="block text-sm font-medium text-gray-700">No. Peserta UKG</label>
+                        <input type="text" id="no_ukg" name="no_ukg" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                    <div>
+                        <label for="nrg" class="block text-sm font-medium text-gray-700">NRG (Nomor Registrasi Guru)</label>
+                        <input type="text" id="nrg" name="nrg" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Step 4: Informasi Jabatan -->
+            <fieldset class="form-step hidden">
+                <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
+                    <i class="fas fa-user-tie mr-2 text-indigo-600"></i>
+                    Informasi Jabatan
+                </legend>
+                <label class="block text-sm font-medium text-gray-700">Jabatan (Bisa pilih lebih dari satu)</label>
+                <div id="jabatan-container" class="mt-2 flex flex-wrap gap-2">
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Kepala Sekolah">Kepala Sekolah</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="WakaBid. Kurikulum dan Pembelajaran">WakaBid. Kurikulum dan Pembelajaran</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="WakaBid. Kesiswaan, Humas dan SarPras">WakaBid. Kesiswaan, Humas dan SarPras</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Staf Ahli Bidang Kebahasaan dan Bilingual">Staf Ahli Bidang Kebahasaan dan Bilingual</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Staf Ahli Bidang Keislaman dan Al Quran">Staf Ahli Bidang Keislaman dan Al Quran</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="KoorBid KurPem Kelas 1">KoorBid KurPem Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="KoorBid KurPem Kelas 2">KoorBid KurPem Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="KoorBid KurPem Kelas 3">KoorBid KurPem Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="KoorBid KurPem Kelas 4">KoorBid KurPem Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="KoorBid KurPem Kelas 5">KoorBid KurPem Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="KoorBid KurPem Kelas 6">KoorBid KurPem Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. PTK & Dapodik">Koord. PTK & Dapodik</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Learning Resource Center">Koord. Learning Resource Center</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Inclusive Learning Center">Koord. Inclusive Learning Center</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Home Base System">Koord. Home Base System</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. School Culture & Character Building">Koord. School Culture & Character Building</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Peng. Bakat Minat & Ekstrakurikuler">Koord. Peng. Bakat Minat & Ekstrakurikuler</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Pembinaan Prestasi & Lomba">Koord. Pembinaan Prestasi & Lomba</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. UKS & Adiwiyata">Koord. UKS & Adiwiyata</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Sekolah Alam">Koord. Sekolah Alam</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. School Branding & Infokom">Koord. School Branding & Infokom</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Kerumahtanggan & Sarpras">Koord. Kerumahtanggan & Sarpras</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Keislaman & Peribadatan">Koord. Keislaman & Peribadatan</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. KurPem Al Quran">Koord. KurPem Al Quran</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 1">Wali Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 2">Wali Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 3">Wali Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 4">Wali Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 5">Wali Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 6">Wali Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 1">Tim Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 2">Tim Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 3">Tim Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 4">Tim Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 5">Tim Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 6">Tim Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 1">Guru PAIBP Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 2">Guru PAIBP Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 3">Guru PAIBP Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 4">Guru PAIBP Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 5">Guru PAIBP Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 6">Guru PAIBP Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PJOK Kelas 1">Guru PJOK Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PJOK Kelas 2">Guru PJOK Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PJOK Kelas 3">Guru PJOK Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PJOK Kelas 4">Guru PJOK Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PJOK Kelas 5">Guru PJOK Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PJOK Kelas 6">Guru PJOK Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru Bahasa Jawa Kelas 1">Guru Bahasa Jawa Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru Bahasa Jawa Kelas 2">Guru Bahasa Jawa Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru Bahasa Jawa Kelas 3">Guru Bahasa Jawa Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru Bahasa Jawa Kelas 4">Guru Bahasa Jawa Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru Bahasa Jawa Kelas 5">Guru Bahasa Jawa Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru Bahasa Jawa Kelas 6">Guru Bahasa Jawa Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPK Kelas 1">GPK Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPK Kelas 2">GPK Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPK Kelas 3">GPK Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPK Kelas 4">GPK Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPK Kelas 5">GPK Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPK Kelas 6">GPK Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 1">GPQ Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 2">GPQ Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 3">GPQ Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 4">GPQ Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 5">GPQ Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 6">GPQ Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim OB">Tim OB</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Dapur">Tim Dapur</div>
+                </div>
+            </fieldset>
+
+            <!-- Step 5: Peta Lokasi -->
+            <fieldset class="form-step hidden">
+                <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
+                    <i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>
+                    Titik Koordinat Lokasi
+                </legend>
+                <p class="text-sm text-gray-600 mb-4">Klik pada peta untuk menandai lokasi Anda. Anda bisa menggeser pin jika perlu.</p>
+                <div id="map" class="w-full shadow-md"></div>
+                <!-- Input tersembunyi untuk menyimpan latitude dan longitude -->
+                <input type="hidden" id="latitude" name="latitude">
+                <input type="hidden" id="longitude" name="longitude">
+                <div id="koordinat-display" class="mt-2 text-sm text-gray-600">Koordinat: (Belum dipilih)</div>
+            </fieldset>
+            
+            <!-- Tombol Navigasi dan Submit -->
+            <div class="pt-5 mt-8 border-t-2 border-gray-200">
+                <div class="flex justify-between">
+                    <button type="button" id="prev-button" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition-colors hidden">
+                        <i class="fas fa-arrow-left mr-2"></i>Sebelumnya
+                    </button>
+                    <button type="button" id="next-button" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors ml-auto">
+                        Berikutnya<i class="fas fa-arrow-right ml-2"></i>
+                    </button>
+                    <button type="submit" id="submit-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hidden">
+                        <span id="button-text">Simpan Biodata</span>
+                        <i id="button-spinner" class="fas fa-spinner fa-spin hidden"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast-notification" class="hidden fixed top-5 right-5 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm transform translate-x-full">
+        <div class="flex items-center">
+            <i id="toast-icon" class="fas fa-check-circle mr-3 text-2xl"></i>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+
+    <!-- Script untuk Firebase dan Logika Aplikasi -->
+    <script type="module">
+        // Import fungsi yang diperlukan dari Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // ===================================================================================
+        // TODO: GANTI DENGAN KONFIGURASI FIREBASE PROYEK ANDA
+        // ===================================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5QmQogcAgmZWvRBwGG4ZMm7nLkPRU2Yg",
+            authDomain: "sekolahanaksaleh-datagukar.firebaseapp.com",
+            projectId: "sekolahanaksaleh-datagukar",
+            storageBucket: "sekolahanaksaleh-datagukar.appspot.com",
+            messagingSenderId: "967662721917",
+            appId: "1:967662721917:web:41b7d78dcc38ea71728a14"
+        };
+        // ===================================================================================
+
+        // Inisialisasi Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // --- LOGIKA MULTI-STEP FORM ---
+        let currentStep = 0;
+        const steps = document.querySelectorAll(".form-step");
+        const prevButton = document.getElementById("prev-button");
+        const nextButton = document.getElementById("next-button");
+        const submitButton = document.getElementById("submit-button");
+        const progressBarFill = document.getElementById('progress-bar-fill');
+        const stepLabels = document.querySelectorAll('.progress-step');
+
+        function showStep(n) {
+            // Sembunyikan semua langkah
+            steps.forEach(step => step.classList.add('hidden'));
+            // Tampilkan langkah yang aktif
+            steps[n].classList.remove('hidden');
+
+            // Atur visibilitas tombol
+            prevButton.classList.toggle('hidden', n === 0);
+            nextButton.classList.toggle('hidden', n === steps.length - 1);
+            submitButton.classList.toggle('hidden', n !== steps.length - 1);
+            
+            updateProgressBar(n);
+            
+            // PERBAIKAN: Panggil invalidateSize jika langkah peta ditampilkan
+            if (steps[n].querySelector('#map')) {
+                setTimeout(function() {
+                    map.invalidateSize();
+                }, 10);
+            }
+        }
+
+        function updateProgressBar(stepIndex) {
+            const percentage = ((stepIndex + 1) / steps.length) * 100;
+            progressBarFill.style.width = `${percentage}%`;
+
+            stepLabels.forEach((label, index) => {
+                if (index < stepIndex) {
+                    label.classList.add('text-indigo-600');
+                    label.classList.remove('font-bold');
+                } else if (index === stepIndex) {
+                    label.classList.add('text-indigo-600', 'font-bold');
+                } else {
+                    label.classList.remove('text-indigo-600', 'font-bold');
+                }
+            });
+        }
+
+        function validateStep(n) {
+            const currentStepFields = steps[n].querySelectorAll('input[required], select[required]');
+            let isValid = true;
+            for (const field of currentStepFields) {
+                if (!field.value.trim()) {
+                    const label = field.previousElementSibling || field.parentElement.previousElementSibling;
+                    showToast(`Kolom "${label.innerText.replace('*', '').trim()}" wajib diisi.`, 'error');
+                    field.focus();
+                    isValid = false;
+                    break; 
+                }
+            }
+            return isValid;
+        }
+
+        nextButton.addEventListener('click', () => {
+            if (validateStep(currentStep)) {
+                currentStep++;
+                showStep(currentStep);
+            }
+        });
+
+        prevButton.addEventListener('click', () => {
+            currentStep--;
+            showStep(currentStep);
+        });
+
+        // Tampilkan langkah pertama saat halaman dimuat
+        showStep(currentStep);
+
+
+        // --- LOGIKA FORM LAINNYA ---
+        const sertifikasiSelect = document.getElementById('sertifikasi');
+        const sertifikasiFields = document.getElementById('sertifikasi-fields');
+
+        sertifikasiSelect.addEventListener('change', (e) => {
+            if (e.target.value === 'ya') {
+                sertifikasiFields.classList.remove('hidden');
+            } else {
+                sertifikasiFields.classList.add('hidden');
+            }
+        });
+
+        const jabatanContainer = document.getElementById('jabatan-container');
+        jabatanContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('jabatan-badge')) {
+                const badge = e.target;
+                const isSelected = badge.dataset.selected === 'true';
+                badge.dataset.selected = !isSelected;
+                badge.classList.toggle('bg-gray-200');
+                badge.classList.toggle('text-gray-700');
+                badge.classList.toggle('bg-indigo-600');
+                badge.classList.toggle('text-white');
+            }
+        });
+
+        const koordinatDisplay = document.getElementById('koordinat-display');
+        const map = L.map('map').setView([-7.98, 112.62], 13);
+        let marker;
+        const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+        const attributionText = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+        L.tileLayer(tileUrl, { maxZoom: 19, attribution: attributionText }).addTo(map);
+
+        map.on('click', function(e) {
+            const { lat, lng } = e.latlng;
+            if (marker) {
+                marker.setLatLng(e.latlng);
+            } else {
+                marker = L.marker(e.latlng, { draggable: true }).addTo(map);
+                marker.on('dragend', (event) => updateCoordinates(event.target.getLatLng().lat, event.target.getLatLng().lng));
+            }
+            updateCoordinates(lat, lng);
+        });
+        
+        function updateCoordinates(lat, lng) {
+            document.getElementById('latitude').value = lat.toFixed(6);
+            document.getElementById('longitude').value = lng.toFixed(6);
+            koordinatDisplay.textContent = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        }
+
+        const toast = document.getElementById('toast-notification');
+        const toastMessage = document.getElementById('toast-message');
+        const toastIcon = document.getElementById('toast-icon');
+        let toastTimeout;
+
+        function showToast(message, type = 'success') {
+            clearTimeout(toastTimeout);
+            toastMessage.textContent = message;
+            toast.classList.remove('bg-green-500', 'bg-red-500');
+            toastIcon.classList.remove('fa-check-circle', 'fa-times-circle');
+            if (type === 'success') {
+                toast.classList.add('bg-green-500');
+                toastIcon.classList.add('fa-check-circle');
+            } else {
+                toast.classList.add('bg-red-500');
+                toastIcon.classList.add('fa-times-circle');
+            }
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.remove('translate-x-full'), 10);
+            toastTimeout = setTimeout(() => toast.classList.add('translate-x-full'), 4000);
+        }
+
+        // --- LOGIKA SUBMIT FORM ---
+        const biodataForm = document.getElementById('biodataForm');
+        const buttonText = document.getElementById('button-text');
+        const buttonSpinner = document.getElementById('button-spinner');
+
+        biodataForm.addEventListener('submit', async (e) => {
+            e.preventDefault(); 
+            
+            // Validasi langkah terakhir
+            if (document.getElementById('latitude').value === '') {
+                 showToast('Silakan tandai lokasi di peta.', 'error');
+                 return;
+            }
+
+            submitButton.disabled = true;
+            buttonText.classList.add('hidden');
+            buttonSpinner.classList.remove('hidden');
+
+            const formData = new FormData(biodataForm);
+            const data = {};
+            
+            for (let [key, value] of formData.entries()) {
+                data[key] = value;
+            }
+
+            const selectedBadges = document.querySelectorAll('.jabatan-badge[data-selected="true"]');
+            data.jabatan = Array.from(selectedBadges).map(badge => badge.dataset.value);
+            data.createdAt = serverTimestamp();
+
+            try {
+                await addDoc(collection(db, "guru"), data);
+                showToast(`Data untuk ${data.nama_lengkap} berhasil disimpan!`, 'success');
+                
+                biodataForm.reset();
+                document.querySelectorAll('.jabatan-badge').forEach(badge => {
+                    badge.dataset.selected = 'false';
+                    badge.classList.remove('bg-indigo-600', 'text-white');
+                    badge.classList.add('bg-gray-200', 'text-gray-700');
+                });
+
+                if(marker) {
+                    map.removeLayer(marker);
+                    marker = null;
+                }
+                sertifikasiFields.classList.add('hidden');
+                koordinatDisplay.textContent = 'Koordinat: (Belum dipilih)';
+                
+                // Kembali ke langkah pertama setelah berhasil
+                currentStep = 0;
+                showStep(currentStep);
+
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showToast(`Gagal menyimpan data. Silakan coba lagi.`, 'error');
+            } finally {
+                submitButton.disabled = false;
+                buttonText.classList.remove('hidden');
+                buttonSpinner.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

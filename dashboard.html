@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Data Guru</title>
+    
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome via CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- LeafletJS (untuk peta) via CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <style>
+        /* Memberi tinggi pada container peta */
+        #detailMap, #allGurusMap { 
+            height: 300px; 
+            border-radius: 0.5rem;
+            z-index: 1;
+        }
+        #allGurusMap {
+            height: 70vh;
+        }
+        /* Style untuk scrollbar di tabel pada layar kecil */
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        /* Style untuk tab aktif */
+        .tab-active {
+            border-color: #4f46e5; /* indigo-600 */
+            color: #4f46e5;
+            background-color: #eef2ff; /* indigo-50 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+
+    <div class="container mx-auto p-4 sm:p-6 md:p-10">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
+                <i class="fas fa-tachometer-alt mr-3 text-indigo-600"></i>Dashboard Data Guru Karyawan
+            </h1>
+            <p class="text-gray-600 mt-2">Menampilkan data Guru dan Karyawan SD Anak Saleh.</p>
+        </header>
+
+        <!-- Tab Navigation -->
+        <div class="mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button id="tab-list" class="tab-button tab-active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
+                        <i class="fas fa-users mr-2"></i>Daftar Guru
+                    </button>
+                    <button id="tab-map" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-map-marked-alt mr-2"></i>Peta Sebaran
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div id="tab-content-list" class="tab-content">
+            <!-- Container untuk Tabel -->
+            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                <div id="loading-spinner" class="text-center p-10">
+                    <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+                    <p class="mt-2">Memuat data...</p>
+                </div>
+                <div id="table-container" class="hidden table-container">
+                    <table class="w-full text-sm text-left text-gray-500">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                            <tr>
+                                <th scope="col" class="px-6 py-3">Profil</th>
+                                <th scope="col" class="px-6 py-3">Jabatan Utama</th>
+                                <th scope="col" class="px-6 py-3">Kota/Kabupaten</th>
+                                <th scope="col" class="px-6 py-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guru-table-body">
+                            <!-- Data akan dimasukkan di sini oleh JavaScript -->
+                        </tbody>
+                    </table>
+                     <p id="no-data" class="text-center py-8 text-gray-500 hidden">Belum ada data yang tersimpan.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content-map" class="tab-content hidden">
+             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+                <div id="allGurusMap"></div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Detail Guru -->
+    <div id="detail-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h3 class="text-2xl font-semibold">Detail Biodata Guru</h3>
+                <button id="close-modal-button" class="text-gray-400 hover:text-gray-600 text-3xl leading-none">&times;</button>
+            </div>
+            <div id="modal-content" class="p-6 space-y-4">
+                <!-- Konten detail akan dimasukkan di sini -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Konfirmasi Hapus -->
+    <div id="delete-confirm-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div class="p-6 text-center">
+                <i class="fas fa-exclamation-triangle text-5xl text-red-500 mx-auto mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900">Konfirmasi Hapus</h3>
+                <div class="mt-2">
+                    <p class="text-sm text-gray-500">Apakah Anda yakin ingin menghapus data ini? Tindakan ini tidak dapat dibatalkan.</p>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 flex flex-row-reverse">
+                <button id="confirm-delete-button" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                    Hapus
+                </button>
+                <button id="cancel-delete-button" type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:w-auto sm:text-sm">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script type="module">
+        // Import fungsi yang diperlukan dari Firebase SDK
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // ===================================================================================
+        // TODO: GANTI DENGAN KONFIGURASI FIREBASE YANG SAMA DENGAN FORMULIR ANDA
+        // ===================================================================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyA5QmQogcAgmZWvRBwGG4ZMm7nLkPRU2Yg",
+            authDomain: "sekolahanaksaleh-datagukar.firebaseapp.com",
+            projectId: "sekolahanaksaleh-datagukar",
+            storageBucket: "sekolahanaksaleh-datagukar.appspot.com",
+            messagingSenderId: "967662721917",
+            appId: "1:967662721917:web:41b7d78dcc38ea71728a14"
+        };
+        // ===================================================================================
+
+        // Inisialisasi Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const guruCollection = collection(db, 'guru');
+        const tableBody = document.getElementById('guru-table-body');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const tableContainer = document.getElementById('table-container');
+        const noDataMessage = document.getElementById('no-data');
+        let allGurusData = [];
+        let allGurusMap = null;
+        let mapMarkers = [];
+
+        // --- Fungsi untuk Avatar ---
+        function createAvatar(name) {
+            const colors = ["#f87171", "#fb923c", "#fbbf24", "#a3e635", "#4ade80", "#34d399", "#22d3ee", "#60a5fa", "#818cf8", "#a78bfa", "#f472b6"];
+            const initials = name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+            const charCodeSum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const color = colors[charCodeSum % colors.length];
+            return `<div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style="background-color: ${color};">${initials}</div>`;
+        }
+
+        // --- Logika Peta Sebaran ---
+        function initializeAllGurusMap() {
+            if (allGurusMap) return;
+            const schoolCoords = [-7.926791, 112.611253];
+            allGurusMap = L.map('allGurusMap').setView(schoolCoords, 13); // Center on School
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(allGurusMap);
+
+            // Menambahkan lingkaran dan popup untuk lokasi sekolah
+            const schoolCircle = L.circle(schoolCoords, {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.3,
+                radius: 500 // dalam meter
+            }).addTo(allGurusMap);
+
+            schoolCircle.bindPopup("<b>SD Anak Saleh</b><br>Lokasi Sekolah.").openPopup();
+        }
+
+        function updateAllGurusMap(gurus) {
+            // Hapus marker lama
+            mapMarkers.forEach(marker => marker.remove());
+            mapMarkers = [];
+
+            gurus.forEach(guru => {
+                if (guru.latitude && guru.longitude) {
+                    const lat = parseFloat(guru.latitude);
+                    const lng = parseFloat(guru.longitude);
+                    const marker = L.marker([lat, lng]).addTo(allGurusMap)
+                        .bindPopup(`<b>${guru.nama_lengkap}</b><br>${guru.alamat}`);
+                    mapMarkers.push(marker);
+                }
+            });
+        }
+
+        // --- Mendengarkan Perubahan Data secara Real-time ---
+        onSnapshot(guruCollection, (querySnapshot) => {
+            loadingSpinner.classList.add('hidden');
+            tableContainer.classList.remove('hidden');
+            tableBody.innerHTML = ''; // Kosongkan tabel
+            allGurusData = [];
+
+            querySnapshot.forEach((doc) => {
+                allGurusData.push({ id: doc.id, ...doc.data() });
+            });
+            
+            if (allGurusData.length === 0) {
+                noDataMessage.classList.remove('hidden');
+            } else {
+                noDataMessage.classList.add('hidden');
+                renderTable(allGurusData);
+            }
+            
+            // Update peta jika sedang aktif
+            if (allGurusMap) {
+                updateAllGurusMap(allGurusData);
+            }
+
+        }, (error) => {
+            console.error("Error fetching data: ", error);
+            loadingSpinner.innerHTML = "<p>Gagal memuat data. Silakan cek konsol.</p>";
+        });
+
+        function renderTable(gurus) {
+            tableBody.innerHTML = '';
+            gurus.forEach(data => {
+                const row = `
+                    <tr class="bg-white border-b hover:bg-gray-50">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center space-x-3">
+                                ${createAvatar(data.nama_lengkap || 'G')}
+                                <div>
+                                    <div class="font-bold text-gray-900 capitalize">${data.gelar_depan || ''} ${data.nama_lengkap} ${data.gelar_belakang || ''}</div>
+                                    <div class="text-sm text-gray-500">${data.NIK || 'NIK tidak ada'}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">${(data.jabatan && data.jabatan.length > 0) ? data.jabatan[0] : 'Tidak ada'}</td>
+                        <td class="px-6 py-4">${data.kota_kabupaten || '-'}</td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center items-center space-x-4">
+                                <button class="font-medium text-indigo-600 hover:underline view-detail-button" data-id="${data.id}">
+                                    Detail
+                                </button>
+                                <button class="font-medium text-red-600 hover:underline delete-button" data-id="${data.id}">
+                                    Hapus
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        // --- Logika Tab ---
+        const tabs = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('tab-active');
+                    t.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                });
+                tab.classList.add('tab-active');
+                tab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+
+                tabContents.forEach(c => c.classList.add('hidden'));
+                const contentId = tab.id.replace('tab-', 'tab-content-');
+                document.getElementById(contentId).classList.remove('hidden');
+
+                if (contentId === 'tab-content-map') {
+                    initializeAllGurusMap();
+                    updateAllGurusMap(allGurusData);
+                    setTimeout(() => allGurusMap.invalidateSize(), 10);
+                }
+            });
+        });
+
+        // --- Logika Modal Detail ---
+        const detailModal = document.getElementById('detail-modal');
+        const closeModalButton = document.getElementById('close-modal-button');
+        const modalContent = document.getElementById('modal-content');
+        let detailMap = null;
+        
+        document.body.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('view-detail-button')) {
+                const docId = e.target.getAttribute('data-id');
+                const docRef = doc(db, "guru", docId);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    displayDetailModal(docSnap.data());
+                } else {
+                    alert("Data tidak ditemukan!");
+                }
+            }
+        });
+
+        function displayDetailModal(data) {
+            const jabatanBadges = (data.jabatan && data.jabatan.length > 0) 
+                ? data.jabatan.map(j => `<span class="bg-indigo-100 text-indigo-800 text-xs font-medium me-2 px-2.5 py-0.5 rounded-full">${j}</span>`).join('')
+                : '<p>-</p>';
+
+            modalContent.innerHTML = `
+                <div class="flex items-center space-x-4 mb-6">
+                    ${createAvatar(data.nama_lengkap || 'G')}
+                    <div>
+                        <h4 class="text-xl font-bold">${data.gelar_depan || ''} ${data.nama_lengkap} ${data.gelar_belakang || ''}</h4>
+                        <p class="text-gray-600">${data.NIK || 'NIK tidak tersedia'}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div><strong>Jenis Kelamin:</strong><p>${data.jenis_kelamin || '-'}</p></div>
+                    <div><strong>Tempat, Tgl Lahir:</strong><p>${data.tempat_lahir || '-'}, ${data.tanggal_lahir || '-'}</p></div>
+                    <div class="md:col-span-2"><strong>Jabatan:</strong><div class="flex flex-wrap gap-2 mt-1">${jabatanBadges}</div></div>
+                    <hr class="md:col-span-2 my-2"/>
+                    <div class="md:col-span-2 text-lg font-semibold">Alamat</div>
+                    <div><strong>Alamat Lengkap:</strong><p>
+                        ${data.alamat || '-'} No. ${data.no_rumah || '-'}, RT/RW ${data.rt || '-'}/${data.rw || '-'}. 
+                        Kel. ${data.kelurahan || '-'}, Kec. ${data.kecamatan || '-'}. 
+                        ${data.kota_kabupaten || '-'}
+                    </p></div>
+                    <div><strong>No. Whatsapp:</strong><p>${data.no_whatsapp || '-'}</p></div>
+                    <hr class="md:col-span-2 my-2"/>
+                    <div class="md:col-span-2 text-lg font-semibold">Pendidikan & Sertifikasi</div>
+                    <div><strong>Pendidikan:</strong><p>${data.pendidikan_terakhir || '-'} (${data.jurusan || '-'})</p></div>
+                    <div><strong>Sertifikasi:</strong><p>${data.sertifikasi === 'ya' ? 'Sudah' : 'Belum'}</p></div>
+                    ${data.sertifikasi === 'ya' ? `
+                        <div><strong>NUPTK:</strong><p>${data.nuptk || '-'}</p></div>
+                        <div><strong>No. UKG:</strong><p>${data.no_ukg || '-'}</p></div>
+                        <div><strong>NRG:</strong><p>${data.nrg || '-'}</p></div>
+                    ` : ''}
+                    <hr class="md:col-span-2 my-2"/>
+                    <div class="md:col-span-2">
+                        <strong class="mb-2 block">Lokasi Koordinat:</strong>
+                        <div id="detailMap"></div>
+                    </div>
+                </div>
+            `;
+            detailModal.classList.remove('hidden');
+
+            if (detailMap) detailMap.remove();
+            if (data.latitude && data.longitude) {
+                const lat = parseFloat(data.latitude);
+                const lng = parseFloat(data.longitude);
+                detailMap = L.map('detailMap').setView([lat, lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(detailMap);
+                L.marker([lat, lng]).addTo(detailMap);
+            } else {
+                document.getElementById('detailMap').innerHTML = '<p class="text-center text-gray-500 p-8">Lokasi tidak tersedia.</p>';
+            }
+        }
+        
+        function closeModal() {
+            detailModal.classList.add('hidden');
+            modalContent.innerHTML = '';
+            if (detailMap) {
+                detailMap.remove();
+                detailMap = null;
+            }
+        }
+        
+        closeModalButton.addEventListener('click', closeModal);
+        detailModal.addEventListener('click', (e) => { if (e.target === detailModal) closeModal(); });
+
+        // --- Fungsi untuk Modal Hapus ---
+        const deleteConfirmModal = document.getElementById('delete-confirm-modal');
+        const confirmDeleteButton = document.getElementById('confirm-delete-button');
+        const cancelDeleteButton = document.getElementById('cancel-delete-button');
+        let docIdToDelete = null;
+
+        document.body.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-button')) {
+                docIdToDelete = e.target.getAttribute('data-id');
+                deleteConfirmModal.classList.remove('hidden');
+            }
+        });
+
+        function closeDeleteModal() {
+            deleteConfirmModal.classList.add('hidden');
+            docIdToDelete = null;
+        }
+
+        cancelDeleteButton.addEventListener('click', closeDeleteModal);
+        confirmDeleteButton.addEventListener('click', async () => {
+            if (docIdToDelete) {
+                try {
+                    await deleteDoc(doc(db, "guru", docIdToDelete));
+                    closeDeleteModal();
+                } catch (error) {
+                    console.error("Error removing document: ", error);
+                    alert("Gagal menghapus data.");
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
