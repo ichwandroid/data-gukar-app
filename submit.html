@@ -11,30 +11,11 @@
     <!-- Font Awesome via CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-    <!-- LeafletJS (untuk peta) via CDN -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-
     <style>
-        /* Memberi tinggi pada container peta */
-        #detailMap, #allGurusMap { 
-            height: 300px; 
-            border-radius: 0.5rem;
-            z-index: 1;
-        }
-        #allGurusMap {
-            height: 70vh;
-        }
         /* Style untuk scrollbar di tabel pada layar kecil */
         .table-container {
-            max-height: 65vh;
+            max-height: 70vh;
             overflow-y: auto;
-        }
-        /* Style untuk tab aktif */
-        .tab-active {
-            border-color: #4f46e5; /* indigo-600 */
-            color: #4f46e5;
-            background-color: #eef2ff; /* indigo-50 */
         }
     </style>
 </head>
@@ -43,73 +24,53 @@
     <div class="container mx-auto p-4 sm:p-6 md:p-10">
         <header class="mb-8 text-center">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-900">
-                <i class="fas fa-tachometer-alt mr-3 text-indigo-600"></i>Dashboard Data Guru
+                <i class="fas fa-users mr-3 text-indigo-600"></i>Dashboard Data Guru Karyawan
             </h1>
-            <p class="text-gray-600 mt-2">Menampilkan data yang tersimpan di Firestore secara real-time.</p>
+            <p class="text-gray-600 mt-2">Menampilkan data Guru dan Karyawan SD Anak Saleh.</p>
         </header>
 
-        <!-- Tab Navigation -->
-        <div class="mb-6">
-            <div class="border-b border-gray-200">
-                <nav class="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button id="tab-list" class="tab-button tab-active whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm">
-                        <i class="fas fa-users mr-2"></i>Daftar Guru
-                    </button>
-                    <button id="tab-map" class="tab-button whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700 hover:border-gray-300">
-                        <i class="fas fa-map-marked-alt mr-2"></i>Peta Sebaran
-                    </button>
-                </nav>
-            </div>
-        </div>
-
-        <!-- Tab Content -->
-        <div id="tab-content-list" class="tab-content">
-            <!-- Container untuk Tabel -->
-            <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                <!-- Action Bar: Filter, Count, Download -->
-                <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                    <div class="flex items-center space-x-4">
-                        <button id="sort-button" class="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
-                            <i id="sort-icon" class="fas fa-sort-alpha-down"></i>
-                            <span>Urutkan Nama</span>
-                        </button>
-                        <button id="download-button" class="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
-                            <i class="fas fa-file-excel"></i>
-                            <span>Unduh CSV</span>
-                        </button>
+        <!-- Container untuk Tabel -->
+        <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <!-- Action Bar: Filter, Count, Download -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                <div class="relative w-full md:w-1/3">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <i class="fas fa-search text-gray-400"></i>
                     </div>
-                    <div class="text-sm font-semibold text-gray-700">
-                        Total Data: <span id="data-count" class="text-indigo-600">0</span>
-                    </div>
+                    <input type="text" id="search-input" placeholder="Cari nama guru..." class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                 </div>
-
-                <div id="loading-spinner" class="text-center p-10">
-                    <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
-                    <p class="mt-2">Memuat data...</p>
-                </div>
-                <div id="table-container" class="hidden table-container">
-                    <table class="w-full text-sm text-left text-gray-500">
-                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                            <tr>
-                                <th scope="col" class="px-6 py-3">Profil</th>
-                                <th scope="col" class="px-6 py-3">Jabatan Utama</th>
-                                <th scope="col" class="px-6 py-3">Kota/Kabupaten</th>
-                                <th scope="col" class="px-6 py-3 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="guru-table-body">
-                            <!-- Data akan dimasukkan di sini oleh JavaScript -->
-                        </tbody>
-                    </table>
-                     <p id="no-data" class="text-center py-8 text-gray-500 hidden">Belum ada data yang tersimpan.</p>
+                <div class="flex items-center space-x-4">
+                    <button id="sort-button" class="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
+                        <i id="sort-icon" class="fas fa-sort-alpha-down"></i>
+                        <span>Urutkan Nama</span>
+                    </button>
+                    <a href="index.html" class="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700">
+                        <span>Home</span>
+                    </a>
                 </div>
             </div>
-        </div>
+             <div class="text-sm font-semibold text-gray-700 mb-4 text-right">
+                Menampilkan <span id="data-count" class="text-indigo-600 font-bold">0</span> data
+            </div>
 
-        <div id="tab-content-map" class="tab-content hidden">
-             <div class="bg-white rounded-xl shadow-lg p-4 sm:p-6">
-                <div id="allGurusMap"></div>
-             </div>
+            <div id="loading-spinner" class="text-center p-10">
+                <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+                <p class="mt-2">Memuat data...</p>
+            </div>
+            <div id="table-container" class="hidden table-container">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Profil</th>
+                            <!-- <th scope="col" class="px-6 py-3 text-right">Aksi</th> -->
+                        </tr>
+                    </thead>
+                    <tbody id="guru-table-body">
+                        <!-- Data akan dimasukkan di sini oleh JavaScript -->
+                    </tbody>
+                </table>
+                 <p id="no-data" class="text-center py-8 text-gray-500 hidden">Belum ada data yang tersimpan.</p>
+            </div>
         </div>
     </div>
 
@@ -179,10 +140,10 @@
         const sortButton = document.getElementById('sort-button');
         const sortIcon = document.getElementById('sort-icon');
         const downloadButton = document.getElementById('download-button');
+        const searchInput = document.getElementById('search-input');
 
         let allGurusData = [];
-        let allGurusMap = null;
-        let mapMarkers = [];
+        let displayedGurus = [];
         let sortOrder = 'asc'; // 'asc' atau 'desc'
 
         // --- Fungsi untuk Avatar ---
@@ -192,30 +153,6 @@
             const charCodeSum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const color = colors[charCodeSum % colors.length];
             return `<div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style="background-color: ${color};">${initials}</div>`;
-        }
-
-        // --- Logika Peta Sebaran ---
-        function initializeAllGurusMap() {
-            if (allGurusMap) return;
-            const schoolCoords = [-7.926791, 112.611253];
-            allGurusMap = L.map('allGurusMap').setView(schoolCoords, 13);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(allGurusMap);
-            const schoolCircle = L.circle(schoolCoords, { color: 'red', fillColor: '#f03', fillOpacity: 0.3, radius: 500 }).addTo(allGurusMap);
-            schoolCircle.bindPopup("<b>SD Anak Saleh</b><br>Lokasi Sekolah.").openPopup();
-        }
-
-        function updateAllGurusMap(gurus) {
-            mapMarkers.forEach(marker => marker.remove());
-            mapMarkers = [];
-            gurus.forEach(guru => {
-                if (guru.latitude && guru.longitude) {
-                    const lat = parseFloat(guru.latitude);
-                    const lng = parseFloat(guru.longitude);
-                    const guruMarker = L.circleMarker([lat, lng], { radius: 8, color: '#3b82f6', fillColor: '#60a5fa', fillOpacity: 0.8 }).addTo(allGurusMap)
-                      .bindPopup(`<b>${guru.nama_lengkap}</b><br>${guru.alamat}`);
-                    mapMarkers.push(guruMarker);
-                }
-            });
         }
 
         // --- Mendengarkan Perubahan Data secara Real-time ---
@@ -228,27 +165,25 @@
                 allGurusData.push({ id: doc.id, ...doc.data() });
             });
             
-            dataCountEl.textContent = allGurusData.length;
-            
-            if (allGurusData.length === 0) {
-                noDataMessage.classList.remove('hidden');
-                tableBody.innerHTML = '';
-            } else {
-                noDataMessage.classList.add('hidden');
-                sortAndRenderTable();
-            }
-            
-            if (allGurusMap && !document.getElementById('tab-content-map').classList.contains('hidden')) {
-                updateAllGurusMap(allGurusData);
-            }
+            filterAndRenderTable();
 
         }, (error) => {
             console.error("Error fetching data: ", error);
             loadingSpinner.innerHTML = "<p>Gagal memuat data. Silakan cek konsol.</p>";
         });
 
-        function sortAndRenderTable() {
-            allGurusData.sort((a, b) => {
+        function filterAndRenderTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            let filteredData = allGurusData;
+
+            if (searchTerm) {
+                filteredData = allGurusData.filter(guru => 
+                    (guru.nama_lengkap || '').toLowerCase().includes(searchTerm)
+                );
+            }
+
+            // Urutkan data yang sudah difilter
+            filteredData.sort((a, b) => {
                 const nameA = a.nama_lengkap.toLowerCase();
                 const nameB = b.nama_lengkap.toLowerCase();
                 if (sortOrder === 'asc') {
@@ -257,7 +192,17 @@
                     return nameB.localeCompare(nameA);
                 }
             });
-            renderTable(allGurusData);
+            
+            displayedGurus = filteredData;
+            dataCountEl.textContent = `${displayedGurus.length} dari ${allGurusData.length} Total`;
+            
+            if (displayedGurus.length === 0) {
+                noDataMessage.classList.remove('hidden');
+                tableBody.innerHTML = '';
+            } else {
+                noDataMessage.classList.add('hidden');
+                renderTable(displayedGurus);
+            }
         }
 
         function renderTable(gurus) {
@@ -270,25 +215,11 @@
                                 ${createAvatar(data.nama_lengkap || 'G')}
                                 <div>
                                     <div class="font-bold text-gray-900">${data.gelar_depan || ''} ${data.nama_lengkap} ${data.gelar_belakang || ''}</div>
-                                    <div class="text-sm text-gray-500">${data.NIK || 'NIK tidak ada'}</div>
+                                    
                                 </div>
                             </div>
                         </td>
-                        <td class="px-6 py-4">${(data.jabatan && data.jabatan.length > 0) ? data.jabatan[0] : 'Tidak ada'}</td>
-                        <td class="px-6 py-4">${data.kota_kabupaten || '-'}</td>
-                        <td class="px-6 py-4 text-center">
-                            <div class="flex justify-center items-center space-x-2">
-                                <button class="font-medium text-gray-600 hover:text-indigo-600 view-detail-button" data-id="${data.id}" title="Lihat Detail">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <a href="edit.html?id=${data.id}" class="font-medium text-gray-600 hover:text-blue-600" title="Edit Data">
-                                    <i class="fas fa-pencil-alt"></i>
-                                </a>
-                                <button class="font-medium text-gray-600 hover:text-red-600 delete-button" data-id="${data.id}" title="Hapus Data">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
+                        
                     </tr>
                 `;
                 tableBody.innerHTML += row;
@@ -296,14 +227,16 @@
         }
 
         // --- Event Listeners untuk Aksi ---
+        searchInput.addEventListener('input', filterAndRenderTable);
+
         sortButton.addEventListener('click', () => {
             sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
             sortIcon.className = sortOrder === 'asc' ? 'fas fa-sort-alpha-down' : 'fas fa-sort-alpha-up';
-            sortAndRenderTable();
+            filterAndRenderTable();
         });
 
         downloadButton.addEventListener('click', () => {
-            if(allGurusData.length === 0) {
+            if(displayedGurus.length === 0) {
                 alert("Tidak ada data untuk diunduh.");
                 return;
             }
@@ -315,17 +248,14 @@
             
             const csvRows = [headers.join(',')];
 
-            allGurusData.forEach(data => {
+            displayedGurus.forEach(data => {
                 const jabatanStr = (data.jabatan || []).join('; ');
                 const values = headers.map(header => {
-                    const key = header.toLowerCase().replace(/ /g, '_').replace('/', '_');
                     let value;
-                    if(header === 'Jabatan') {
-                        value = jabatanStr;
-                    } else {
-                        value = data[header] || data[key] || '';
-                    }
-                    // Escape commas and quotes
+                    if (header === 'Nama Lengkap') value = data.nama_lengkap;
+                    else if (header === 'Jabatan') value = jabatanStr;
+                    else value = data[header.toLowerCase().replace(/ /g, '_')] || data[header] || '';
+
                     const stringValue = String(value);
                     if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
                         return `"${stringValue.replace(/"/g, '""')}"`;
@@ -336,7 +266,7 @@
             });
 
             const csvString = csvRows.join('\n');
-            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const blob = new Blob([`\uFEFF${csvString}`], { type: 'text/csv;charset=utf-8;' }); // \uFEFF for BOM
             const link = document.createElement('a');
             const url = URL.createObjectURL(blob);
             link.setAttribute('href', url);
@@ -347,32 +277,10 @@
             document.body.removeChild(link);
         });
 
-
-        // --- Logika Tab ---
-        const tabs = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('tab-active'));
-                tab.classList.add('tab-active');
-
-                tabContents.forEach(c => c.classList.add('hidden'));
-                const contentId = tab.id.replace('tab-', 'tab-content-');
-                document.getElementById(contentId).classList.remove('hidden');
-
-                if (contentId === 'tab-content-map') {
-                    initializeAllGurusMap();
-                    updateAllGurusMap(allGurusData);
-                    setTimeout(() => allGurusMap.invalidateSize(), 10);
-                }
-            });
-        });
-
         // --- Logika Modal Detail ---
         const detailModal = document.getElementById('detail-modal');
         const closeModalButton = document.getElementById('close-modal-button');
         const modalContent = document.getElementById('modal-content');
-        let detailMap = null;
         
         document.body.addEventListener('click', async (e) => {
             const button = e.target.closest('.view-detail-button');
@@ -423,35 +331,14 @@
                         <div><strong>No. UKG:</strong><p>${data.no_ukg || '-'}</p></div>
                         <div><strong>NRG:</strong><p>${data.nrg || '-'}</p></div>
                     ` : ''}
-                    <hr class="md:col-span-2 my-2"/>
-                    <div class="md:col-span-2">
-                        <strong class="mb-2 block">Lokasi Koordinat:</strong>
-                        <div id="detailMap"></div>
-                    </div>
                 </div>
             `;
             detailModal.classList.remove('hidden');
-
-            if (detailMap) detailMap.remove();
-            if (data.latitude && data.longitude) {
-                const lat = parseFloat(data.latitude);
-                const lng = parseFloat(data.longitude);
-                detailMap = L.map('detailMap').setView([lat, lng], 15);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(detailMap);
-                L.marker([lat, lng]).addTo(detailMap);
-                setTimeout(() => detailMap.invalidateSize(), 10);
-            } else {
-                document.getElementById('detailMap').innerHTML = '<p class="text-center text-gray-500 p-8">Lokasi tidak tersedia.</p>';
-            }
         }
         
         function closeModal() {
             detailModal.classList.add('hidden');
             modalContent.innerHTML = '';
-            if (detailMap) {
-                detailMap.remove();
-                detailMap = null;
-            }
         }
         
         closeModalButton.addEventListener('click', closeModal);

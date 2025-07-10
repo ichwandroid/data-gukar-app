@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Pendataan Biodata Guru Karyawan SD Anak Saleh</title>
+    <title>Edit Biodata Guru</title>
     
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -16,27 +16,10 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <style>
-        /* Memberi tinggi pada container peta agar terlihat */
-        #map { 
-            height: 400px; 
-            border-radius: 0.5rem; /* rounded-lg */
-            z-index: 0;
-        }
-        /* Mengatasi masalah input tanggal yang terkadang transparan */
-        input[type="date"]::-webkit-calendar-picker-indicator {
-            opacity: 1;
-        }
-        /* Transisi untuk toast notification */
-        #toast-notification {
-            transition: transform 0.5s ease-in-out, opacity 0.5s;
-        }
-        /* Transisi untuk progress bar dan step labels */
-        #progress-bar-fill, .progress-step {
-            transition: all 0.5s ease-in-out;
-        }
-        .leaflet-control-attribution {
-            display: none; /* Sembunyikan kontrol atribusi Leaflet */
-        }
+        #map { height: 400px; border-radius: 0.5rem; z-index: 0; }
+        input[type="date"]::-webkit-calendar-picker-indicator { opacity: 1; }
+        #toast-notification { transition: transform 0.5s ease-in-out, opacity 0.5s; }
+        #progress-bar-fill, .progress-step { transition: all 0.5s ease-in-out; }
     </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans">
@@ -44,10 +27,10 @@
     <div class="container mx-auto p-4 sm:p-6 md:p-10">
         <header class="mb-8 text-center">
             <h1 class="text-3xl md:text-4xl font-bold text-gray-900 flex items-center justify-center">
-                <i class="fas fa-user-edit mr-3 text-indigo-600"></i>
-                Formulir Biodata Guru
+                <i class="fas fa-pencil-alt mr-3 text-indigo-600"></i>
+                Edit Biodata Guru
             </h1>
-            <p class="text-gray-600 mt-2">Silakan isi data dengan lengkap dan benar.</p>
+            <p class="text-gray-600 mt-2">Perbarui data guru di bawah ini.</p>
         </header>
 
         <!-- Progress Bar Section -->
@@ -57,16 +40,20 @@
                 <div id="progress-bar-fill" class="bg-indigo-600 h-2.5 rounded-full" style="width: 20%"></div>
             </div>
             <div class="flex justify-between text-xs text-gray-500 mt-2">
-                <span id="step-pribadi" class="progress-step font-bold text-indigo-600"><i class="fas fa-user-circle mr-2 text-indigo-600"></i>Pribadi</span>
-                <span id="step-alamat" class="progress-step"><i class="fas fa-home mr-2 text-indigo-600"></i>Alamat</span>
-                <span id="step-pendidikan" class="progress-step"><i class="fas fa-graduation-cap mr-2 text-indigo-600"></i>Pendidikan</span>
-                <span id="step-jabatan" class="progress-step"><i class="fas fa-user-tie mr-2 text-indigo-600"></i>Jabatan</span>
-                <span id="step-lokasi" class="progress-step"><i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>Lokasi</span>
+                <span id="step-pribadi" class="progress-step font-bold text-indigo-600">Pribadi</span>
+                <span id="step-alamat" class="progress-step">Alamat</span>
+                <span id="step-pendidikan" class="progress-step">Pendidikan</span>
+                <span id="step-jabatan" class="progress-step">Jabatan</span>
+                <span id="step-lokasi" class="progress-step">Lokasi</span>
             </div>
         </div>
 
+        <div id="form-loading" class="text-center p-10">
+            <i class="fas fa-spinner fa-spin text-3xl text-indigo-600"></i>
+            <p class="mt-2">Memuat data guru...</p>
+        </div>
 
-        <form id="biodataForm" class="bg-white p-6 sm:p-8 rounded-xl shadow-lg">
+        <form id="biodataForm" class="hidden bg-white p-6 sm:p-8 rounded-xl shadow-lg">
             
             <!-- Step 1: Informasi Pribadi -->
             <fieldset class="form-step">
@@ -85,7 +72,7 @@
                     </div>
                     <div class="md:col-span-8">
                         <label for="nama_lengkap" class="block text-sm font-medium text-gray-700">Nama Lengkap (Tanpa Gelar) <span class="text-red-500">*</span></label>
-                        <input type="text" id="nama_lengkap" name="nama_lengkap" required placeholder="Masukkan nama tanpa gelar" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <input type="text" id="nama_lengkap" name="nama_lengkap" required placeholder="Masukkan nama lengkap" class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     </div>
                      <div class="md:col-span-2">
                         <label for="gelar_belakang" class="block text-sm font-medium text-gray-700">Gelar Belakang</label>
@@ -96,7 +83,7 @@
                     <div>
                         <label for="jenis_kelamin" class="block text-sm font-medium text-gray-700">Jenis Kelamin <span class="text-red-500">*</span></label>
                         <select id="jenis_kelamin" name="jenis_kelamin" required class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option value="" disabled selected>Pilih Jenis Kelamin</option>
+                            <option value="" disabled>Pilih Jenis Kelamin</option>
                             <option value="Laki-laki">Laki-laki</option>
                             <option value="Perempuan">Perempuan</option>
                         </select>
@@ -116,7 +103,7 @@
             <fieldset class="form-step hidden">
                 <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
                     <i class="fas fa-home mr-2 text-indigo-600"></i>
-                    Informasi Alamat Domisili 
+                    Informasi Alamat
                 </legend>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="md:col-span-4">
@@ -149,7 +136,7 @@
                     </div>
                     <div class="md:col-span-1">
                         <label for="no_whatsapp" class="block text-sm font-medium text-gray-700">No Whatsapp</label>
-                        <input type="text" id="no_whatsapp" name="no_whatsapp" placeholder="Contoh: 628123...." class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                        <input type="text" id="no_whatsapp" name="no_whatsapp" placeholder="628123...." class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
                     </div>
                 </div>
             </fieldset>
@@ -164,7 +151,7 @@
                     <div>
                          <label for="pendidikan_terakhir" class="block text-sm font-medium text-gray-700">Pendidikan Terakhir <span class="text-red-500">*</span></label>
                         <select id="pendidikan_terakhir" name="pendidikan_terakhir" required class="mt-1 p-2 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                             <option value="" disabled selected>Pilih Pendidikan</option>
+                             <option value="" disabled>Pilih Pendidikan</option>
                              <option value="SMA/SMK">SMA/SMK Sederajat</option>
                              <option value="D1">D1</option>
                              <option value="D2">D2</option>
@@ -186,7 +173,6 @@
                         <option value="ya">Ya</option>
                     </select>
                 </div>
-                <!-- Field Sertifikasi (muncul kondisional) -->
                 <div id="sertifikasi-fields" class="hidden mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 transition-all duration-500">
                     <div>
                         <label for="nuptk" class="block text-sm font-medium text-gray-700">NUPTK</label>
@@ -211,7 +197,6 @@
                 </legend>
                 <label class="block text-sm font-medium text-gray-700">Jabatan (Bisa pilih lebih dari satu)</label>
                 <div id="jabatan-container" class="mt-2 flex flex-wrap gap-2">
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Kepala Sekolah">Kepala Sekolah</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="WakaBid. Kurikulum dan Pembelajaran">WakaBid. Kurikulum dan Pembelajaran</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="WakaBid. Kesiswaan, Humas dan SarPras">WakaBid. Kesiswaan, Humas dan SarPras</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Staf Ahli Bidang Kebahasaan dan Bilingual">Staf Ahli Bidang Kebahasaan dan Bilingual</div>
@@ -235,18 +220,6 @@
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Kerumahtanggan & Sarpras">Koord. Kerumahtanggan & Sarpras</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. Keislaman & Peribadatan">Koord. Keislaman & Peribadatan</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Koord. KurPem Al Quran">Koord. KurPem Al Quran</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 1">Wali Kelas 1</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 2">Wali Kelas 2</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 3">Wali Kelas 3</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 4">Wali Kelas 4</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 5">Wali Kelas 5</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 6">Wali Kelas 6</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 1">Tim Kelas 1</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 2">Tim Kelas 2</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 3">Tim Kelas 3</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 4">Tim Kelas 4</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 5">Tim Kelas 5</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 6">Tim Kelas 6</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 1">Guru PAIBP Kelas 1</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 2">Guru PAIBP Kelas 2</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru PAIBP Kelas 3">Guru PAIBP Kelas 3</div>
@@ -277,8 +250,19 @@
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 4">GPQ Kelas 4</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 5">GPQ Kelas 5</div>
                     <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="GPQ Kelas 6">GPQ Kelas 6</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim OB">Tim OB</div>
-                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Dapur">Tim Dapur</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 1">Wali Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 2">Wali Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 3">Wali Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 4">Wali Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 5">Wali Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Wali Kelas 6">Wali Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 1">Tim Kelas 1</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 2">Tim Kelas 2</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 3">Tim Kelas 3</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 4">Tim Kelas 4</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 5">Tim Kelas 5</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Tim Kelas 6">Tim Kelas 6</div>
+                    <div class="jabatan-badge cursor-pointer py-1 px-3 rounded-full text-sm transition-colors bg-gray-200 text-gray-700" data-value="Guru">Guru</div>
                 </div>
             </fieldset>
 
@@ -286,11 +270,10 @@
             <fieldset class="form-step hidden">
                 <legend class="text-xl font-semibold mb-4 text-gray-800 border-b pb-2 flex items-center">
                     <i class="fas fa-map-marker-alt mr-2 text-indigo-600"></i>
-                    Titik Koordinat Lokasi Rumah
+                    Titik Koordinat Lokasi
                 </legend>
-                <p class="text-sm text-gray-600 mb-4">Klik pada peta untuk menandai lokasi rumah Anda. Anda bisa menggeser pin jika perlu.</p>
+                <p class="text-sm text-gray-600 mb-4">Klik pada peta untuk menandai lokasi Anda. Anda bisa menggeser pin jika perlu.</p>
                 <div id="map" class="w-full shadow-md"></div>
-                <!-- Input tersembunyi untuk menyimpan latitude dan longitude -->
                 <input type="hidden" id="latitude" name="latitude">
                 <input type="hidden" id="longitude" name="longitude">
                 <div id="koordinat-display" class="mt-2 text-sm text-gray-600">Koordinat: (Belum dipilih)</div>
@@ -306,7 +289,7 @@
                         Berikutnya<i class="fas fa-arrow-right ml-2"></i>
                     </button>
                     <button type="submit" id="submit-button" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors hidden">
-                        <span id="button-text">Simpan Biodata</span>
+                        <span id="button-text">Update Biodata</span>
                         <i id="button-spinner" class="fas fa-spinner fa-spin hidden"></i>
                     </button>
                 </div>
@@ -322,15 +305,12 @@
         </div>
     </div>
 
-
-    <!-- Script untuk Firebase dan Logika Aplikasi -->
     <script type="module">
-        // Import fungsi yang diperlukan dari Firebase SDK
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, updateDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // ===================================================================================
-        // TODO: GANTI DENGAN KONFIGURASI FIREBASE PROYEK ANDA
+        // TODO: GANTI DENGAN KONFIGURASI FIREBASE ANDA
         // ===================================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyA5QmQogcAgmZWvRBwGG4ZMm7nLkPRU2Yg",
@@ -342,11 +322,9 @@
         };
         // ===================================================================================
 
-        // Inisialisasi Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- LOGIKA MULTI-STEP FORM ---
         let currentStep = 0;
         const steps = document.querySelectorAll(".form-step");
         const prevButton = document.getElementById("prev-button");
@@ -354,57 +332,85 @@
         const submitButton = document.getElementById("submit-button");
         const progressBarFill = document.getElementById('progress-bar-fill');
         const stepLabels = document.querySelectorAll('.progress-step');
+        const biodataForm = document.getElementById('biodataForm');
+        const formLoading = document.getElementById('form-loading');
+        let map;
+        let marker;
 
+        // --- Fungsi untuk mengisi form dengan data yang ada ---
+        function populateForm(data) {
+            // Isi semua input dan select
+            for (const key in data) {
+                const element = biodataForm.elements[key];
+                if (element) {
+                    element.value = data[key];
+                }
+            }
+
+            // Atur jabatan badges
+            if (data.jabatan && Array.isArray(data.jabatan)) {
+                document.querySelectorAll('.jabatan-badge').forEach(badge => {
+                    if (data.jabatan.includes(badge.dataset.value)) {
+                        badge.dataset.selected = 'true';
+                        badge.classList.add('bg-indigo-600', 'text-white');
+                        badge.classList.remove('bg-gray-200', 'text-gray-700');
+                    }
+                });
+            }
+            
+            // Atur field sertifikasi
+             if (data.sertifikasi === 'ya') {
+                document.getElementById('sertifikasi-fields').classList.remove('hidden');
+            }
+
+            // Atur peta
+            if (data.latitude && data.longitude) {
+                const lat = parseFloat(data.latitude);
+                const lng = parseFloat(data.longitude);
+                updateCoordinates(lat, lng);
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                } else {
+                    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+                    marker.on('dragend', (event) => updateCoordinates(event.target.getLatLng().lat, event.target.getLatLng().lng));
+                }
+                map.setView([lat, lng], 15);
+            }
+        }
+
+        // --- Logika Multi-Step Form ---
         function showStep(n) {
-            // Sembunyikan semua langkah
             steps.forEach(step => step.classList.add('hidden'));
-            // Tampilkan langkah yang aktif
             steps[n].classList.remove('hidden');
-
-            // Atur visibilitas tombol
             prevButton.classList.toggle('hidden', n === 0);
             nextButton.classList.toggle('hidden', n === steps.length - 1);
             submitButton.classList.toggle('hidden', n !== steps.length - 1);
-            
             updateProgressBar(n);
-            
-            // PERBAIKAN: Panggil invalidateSize jika langkah peta ditampilkan
             if (steps[n].querySelector('#map')) {
-                setTimeout(function() {
-                    map.invalidateSize();
-                }, 10);
+                setTimeout(() => map.invalidateSize(), 10);
             }
         }
 
         function updateProgressBar(stepIndex) {
             const percentage = ((stepIndex + 1) / steps.length) * 100;
             progressBarFill.style.width = `${percentage}%`;
-
             stepLabels.forEach((label, index) => {
-                if (index < stepIndex) {
-                    label.classList.add('text-indigo-600');
-                    label.classList.remove('font-bold');
-                } else if (index === stepIndex) {
-                    label.classList.add('text-indigo-600', 'font-bold');
-                } else {
-                    label.classList.remove('text-indigo-600', 'font-bold');
-                }
+                label.classList.toggle('font-bold', index === stepIndex);
+                label.classList.toggle('text-indigo-600', index <= stepIndex);
             });
         }
 
         function validateStep(n) {
             const currentStepFields = steps[n].querySelectorAll('input[required], select[required]');
-            let isValid = true;
             for (const field of currentStepFields) {
                 if (!field.value.trim()) {
                     const label = field.previousElementSibling || field.parentElement.previousElementSibling;
                     showToast(`Kolom "${label.innerText.replace('*', '').trim()}" wajib diisi.`, 'error');
                     field.focus();
-                    isValid = false;
-                    break; 
+                    return false;
                 }
             }
-            return isValid;
+            return true;
         }
 
         nextButton.addEventListener('click', () => {
@@ -413,34 +419,20 @@
                 showStep(currentStep);
             }
         });
-
         prevButton.addEventListener('click', () => {
             currentStep--;
             showStep(currentStep);
         });
 
-        // Tampilkan langkah pertama saat halaman dimuat
-        showStep(currentStep);
-
-
-        // --- LOGIKA FORM LAINNYA ---
-        const sertifikasiSelect = document.getElementById('sertifikasi');
-        const sertifikasiFields = document.getElementById('sertifikasi-fields');
-
-        sertifikasiSelect.addEventListener('change', (e) => {
-            if (e.target.value === 'ya') {
-                sertifikasiFields.classList.remove('hidden');
-            } else {
-                sertifikasiFields.classList.add('hidden');
-            }
+        // --- Logika Form Lainnya ---
+        document.getElementById('sertifikasi').addEventListener('change', (e) => {
+            document.getElementById('sertifikasi-fields').classList.toggle('hidden', e.target.value !== 'ya');
         });
 
-        const jabatanContainer = document.getElementById('jabatan-container');
-        jabatanContainer.addEventListener('click', (e) => {
+        document.getElementById('jabatan-container').addEventListener('click', (e) => {
             if (e.target.classList.contains('jabatan-badge')) {
                 const badge = e.target;
-                const isSelected = badge.dataset.selected === 'true';
-                badge.dataset.selected = !isSelected;
+                badge.dataset.selected = !(badge.dataset.selected === 'true');
                 badge.classList.toggle('bg-gray-200');
                 badge.classList.toggle('text-gray-700');
                 badge.classList.toggle('bg-indigo-600');
@@ -448,95 +440,97 @@
             }
         });
 
-        const koordinatDisplay = document.getElementById('koordinat-display');
-        const map = L.map('map').setView([-7.98, 112.62], 13);
-        let marker;
-        const tileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-        const attributionText = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-        L.tileLayer(tileUrl, { maxZoom: 19, attribution: attributionText }).addTo(map);
+        // --- Logika Peta ---
+        function initMap() {
+            map = L.map('map').setView([-7.98, 112.62], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            map.on('click', function(e) {
+                const { lat, lng } = e.latlng;
+                if (!marker) {
+                    marker = L.marker(e.latlng, { draggable: true }).addTo(map);
+                    marker.on('dragend', (event) => updateCoordinates(event.target.getLatLng().lat, event.target.getLatLng().lng));
+                } else {
+                    marker.setLatLng(e.latlng);
+                }
+                updateCoordinates(lat, lng);
+            });
+        }
 
-        map.on('click', function(e) {
-            const { lat, lng } = e.latlng;
-            if (marker) {
-                marker.setLatLng(e.latlng);
-            } else {
-                marker = L.marker(e.latlng, { draggable: true }).addTo(map);
-                marker.on('dragend', (event) => updateCoordinates(event.target.getLatLng().lat, event.target.getLatLng().lng));
-            }
-            updateCoordinates(lat, lng);
-        });
-        
         function updateCoordinates(lat, lng) {
             document.getElementById('latitude').value = lat.toFixed(6);
             document.getElementById('longitude').value = lng.toFixed(6);
-            koordinatDisplay.textContent = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+            document.getElementById('koordinat-display').textContent = `Koordinat: ${lat.toFixed(6)}, ${lng.toFixed(6)}`;
         }
 
-        const toast = document.getElementById('toast-notification');
-        const toastMessage = document.getElementById('toast-message');
-        const toastIcon = document.getElementById('toast-icon');
+        // --- Logika Toast ---
         let toastTimeout;
-
         function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast-notification');
+            const toastMessage = document.getElementById('toast-message');
+            const toastIcon = document.getElementById('toast-icon');
             clearTimeout(toastTimeout);
             toastMessage.textContent = message;
-            toast.classList.remove('bg-green-500', 'bg-red-500');
-            toastIcon.classList.remove('fa-check-circle', 'fa-times-circle');
-            if (type === 'success') {
-                toast.classList.add('bg-green-500');
-                toastIcon.classList.add('fa-check-circle');
-            } else {
-                toast.classList.add('bg-red-500');
-                toastIcon.classList.add('fa-times-circle');
-            }
-            toast.classList.remove('hidden');
+            toast.className = `fixed top-5 right-5 z-50 p-4 rounded-lg shadow-lg text-white max-w-sm transform translate-x-full ${type === 'success' ? 'bg-green-500' : 'bg-red-500'}`;
+            toastIcon.className = `fas ${type === 'success' ? 'fa-check-circle' : 'fa-times-circle'} mr-3 text-2xl`;
             setTimeout(() => toast.classList.remove('translate-x-full'), 10);
             toastTimeout = setTimeout(() => toast.classList.add('translate-x-full'), 4000);
         }
 
-        // --- LOGIKA SUBMIT FORM ---
-        const biodataForm = document.getElementById('biodataForm');
-        const buttonText = document.getElementById('button-text');
-        const buttonSpinner = document.getElementById('button-spinner');
+        // --- Logika Utama Saat Halaman Dimuat ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            initMap();
+            const urlParams = new URLSearchParams(window.location.search);
+            const docId = urlParams.get('id');
 
-        biodataForm.addEventListener('submit', async (e) => {
-            e.preventDefault(); 
-            
-            // Validasi langkah terakhir
-            if (document.getElementById('latitude').value === '') {
-                 showToast('Silakan tandai lokasi di peta.', 'error');
-                 return;
+            if (!docId) {
+                formLoading.innerHTML = '<p class="text-red-500">ID Guru tidak valid. Kembali ke <a href="dashboard.html" class="underline">dashboard</a>.</p>';
+                return;
             }
+
+            const docRef = doc(db, "guru", docId);
+            const docSnap = await getDoc(docRef);
+
+            if (docSnap.exists()) {
+                formLoading.classList.add('hidden');
+                biodataForm.classList.remove('hidden');
+                populateForm(docSnap.data());
+                showStep(0);
+            } else {
+                formLoading.innerHTML = '<p class="text-red-500">Data guru tidak ditemukan. Kembali ke <a href="dashboard.html" class="underline">dashboard</a>.</p>';
+            }
+        });
+
+        // --- Logika Submit Form ---
+        biodataForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const docId = new URLSearchParams(window.location.search).get('id');
+            if (!docId) return;
 
             submitButton.disabled = true;
-            buttonText.classList.add('hidden');
-            buttonSpinner.classList.remove('hidden');
+            document.getElementById('button-text').classList.add('hidden');
+            document.getElementById('button-spinner').classList.remove('hidden');
 
             const formData = new FormData(biodataForm);
-            const data = {};
-            
+            const dataToUpdate = {};
             for (let [key, value] of formData.entries()) {
-                data[key] = value;
+                dataToUpdate[key] = value;
             }
-
             const selectedBadges = document.querySelectorAll('.jabatan-badge[data-selected="true"]');
-            data.jabatan = Array.from(selectedBadges).map(badge => badge.dataset.value);
-            data.createdAt = serverTimestamp();
-
+            dataToUpdate.jabatan = Array.from(selectedBadges).map(badge => badge.dataset.value);
+            
+            const docRef = doc(db, "guru", docId);
             try {
-                await addDoc(collection(db, "guru"), data);
-                showToast(`Data untuk ${data.nama_lengkap} berhasil disimpan!`, 'success');
-                
+                await updateDoc(docRef, dataToUpdate);
+                showToast('Data berhasil diperbarui!', 'success');
                 setTimeout(() => {
-                    window.location.href = 'submit.html';
+                    window.location.href = 'submit.html'; // Ganti dengan nama file dashboard Anda
                 }, 1500);
-
             } catch (error) {
-                console.error("Error adding document: ", error);
-                showToast(`Gagal menyimpan data. Silakan coba lagi.`, 'error');
+                console.error("Error updating document: ", error);
+                showToast('Gagal memperbarui data.', 'error');
                 submitButton.disabled = false;
-                buttonText.classList.remove('hidden');
-                buttonSpinner.classList.add('hidden');
+                document.getElementById('button-text').classList.remove('hidden');
+                document.getElementById('button-spinner').classList.add('hidden');
             }
         });
     </script>
